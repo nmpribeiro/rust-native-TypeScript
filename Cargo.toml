@@ -1,0 +1,17 @@
+[package]
+authors = ["Nuno Ribeiro <nmpribeiro@gmail.com>"]
+edition = "2018"
+name = "rust_vm"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+enum-methods = "0.0.8"
+plain_enum = "0.9.9"
+rustc-hash = "1.1.0"
+smol_str = "0.1.17"
+string-interner = "0.12.1"
+
+[features]
+log_level_debug = []
