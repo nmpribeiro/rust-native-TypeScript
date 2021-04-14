@@ -1,6 +1,13 @@
 # rust-native-TypeScript
 
+# to run
+
+- Uses rust nightly
+
+- `cargo run --features "log_level_debug" ./test.ts`
+
 # Currently on
+
 https://craftinginterpreters.com/types-of-values.html
 
 # Resources
