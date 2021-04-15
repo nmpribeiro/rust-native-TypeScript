@@ -5,14 +5,14 @@ pub struct Scanner {
     start: usize,
     current: usize,
     lexeme: String,
-    source: String,
+    pub source: String,
     pub line: isize,
 }
 
 impl Scanner {
-    pub fn new(source: &str) -> Scanner {
+    pub fn new(source: String) -> Scanner {
         Scanner {
-            source: source.to_string(),
+            source: source,
             lexeme: String::from(""),
             start: 0,
             current: 0,
@@ -112,13 +112,18 @@ impl Scanner {
 
     fn skip_whitespace(&mut self) {
         loop {
+            if self.is_at_end() {
+                // nothing to do here
+                return;
+            }
             let c = self.peek();
             match c {
                 ' ' | '\r' | '\t' => {
                     self.advance();
                 }
                 '\n' => {
-                    self.line = self.line + 1;
+                    self.line += 1;
+                    println!("[scanner][line {}] line advanced", self.line);
                     self.advance();
                 }
                 '/' => {
@@ -128,7 +133,7 @@ impl Scanner {
                             if self.peek() != '\n' && !self.is_at_end() {
                                 self.advance();
                             } else {
-                                return;
+                                break;
                             }
                         }
                     }
@@ -137,13 +142,12 @@ impl Scanner {
                         loop {
                             // Handle new line increments
                             if self.peek() == '\n' {
-                                self.line = self.line + 1;
+                                self.line += 1;
                             }
                             if self.is_at_end() {
                                 // nothing to do here
                                 return;
                             }
-
                             // is "*/"" matched?;
                             let condition_met = self.peek() == '*' && self.peek_next() == '/';
                             if condition_met {
@@ -273,7 +277,7 @@ impl Scanner {
         }
 
         if self.is_at_end() {
-            return self.error_token("Unterminated string.");
+            return self.error_token("[scanner] Unterminated string.");
         }
 
         //closing quote
@@ -359,7 +363,7 @@ impl Scanner {
             '"' => return self.string('"'),   // double quotes
             '\'' => return self.string('\''), // single quotes
             _ => {
-                println!("Unexpected character: {}", c);
+                println!("[Scanner][line {}] Unexpected character: {}", self.line, c);
                 return self.error_token("Unexpected character.");
             }
         }

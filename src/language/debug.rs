@@ -4,20 +4,49 @@ use smol_str::SmolStr;
 
 #[cfg(feature = "log_level_debug")]
 pub trait Debug {
-    fn disassemble(&self, name: &str);
+    fn disassemble(&self, name: &Option<StrId>);
 }
 
 #[cfg(feature = "log_level_debug")]
 impl Debug for Chunk {
-    fn disassemble(&self, name: &str) {
-        println!("== {} ==", name);
+    // fn disassemble(&self) {
+    //     println!("== {} ==", name);
 
-        for i in 0..self.code.len() {
-            match self.code.get(i) {
-                Some(op_code) => disassemble_instruction(i, op_code),
-                _ => println!("Error debugging OpCode on at {}", i),
+    //     for i in 0..self.code.len() {
+    //         match self.code.get(i) {
+    //             Some(op_code) => Chunk::disassemble_instruction(i, op_code),
+    //             _ => println!("Error debugging OpCode on at {}", i),
+    //         }
+    //     }
+    // }
+
+    fn disassemble(&self, name: &Option<StrId>) {
+        if cfg!(debug_assertions) {
+            println!(
+                "== {} ==",
+                name.map(to_str)
+                    .unwrap_or_else(|| SmolStr::new_inline("SCRIPT"))
+            );
+            for i in 0..self.code.len() {
+                match self.code.get(i) {
+                    Some(instruction) => disassemble_instruction(i, instruction, self),
+                    _ => println!("Error debugging OpCode on at {}", i),
+                }
             }
         }
+    }
+}
+
+fn disassemble_instruction(index: usize, instruction: &OpCode, chunk: &Chunk) {
+    print!("{:04} ", index);
+    if index > 0 && chunk.lines[index] == chunk.lines[index - 1] {
+        print!("   | ");
+    } else {
+        print!("{:04} ", chunk.lines[index]);
+    }
+    match instruction {
+        OpCode::STRING(value) => print!("{:03}\n", instruction),
+        _ => print!("{:03} \n", instruction),
     }
 }
 
@@ -45,23 +74,6 @@ impl Debug for Chunk {
 //         _ => println!("Unknown opcode {:04}\n", op_code),
 //     }
 // }
-
-pub fn disassemble_chunk(chunk: &Chunk, name: &Option<StrId>) {
-    if cfg!(debug_assertions) {
-        println!(
-            "== {} ==",
-            name.map(to_str)
-                .unwrap_or_else(|| SmolStr::new_inline("SCRIPT"))
-        );
-        for (index, instruction) in chunk.code.iter().enumerate() {
-            disassemble_instruction(index, instruction);
-        }
-    }
-}
-
-fn disassemble_instruction(index: usize, instruction: &OpCode) {
-    println!("{:04}  L{:03} ", index, instruction);
-}
 
 // #[cfg(feature = "log_level_debug")]
 // fn simple_instruction(op_code: OpCode) {

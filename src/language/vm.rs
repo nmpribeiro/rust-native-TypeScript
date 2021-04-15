@@ -1,7 +1,7 @@
 use super::chunk::Chunk;
-use super::common::{intern, OpCode, StrId};
+use super::common::{intern, to_str, OpCode, StrId};
 #[cfg(feature = "log_level_debug")]
-use super::debug::{disassemble_chunk, Debug};
+use super::debug::Debug;
 use super::value::Value;
 use crate::Compiler;
 
@@ -11,32 +11,38 @@ pub enum Failure {
 }
 type Res = Result<(), Failure>;
 
-pub enum InterpreterResult {
-    Ok,
-    CompileError,
-    RuntimeError,
-}
-
 pub struct VM {
-    chunk: Chunk,
     ip: usize,
+    pub chunk: Option<Chunk>,
     stack: Vec<Value>,
 }
 
 impl VM {
     pub fn new() -> VM {
         VM {
-            chunk: Chunk::new(),
+            chunk: Some(Chunk::new()),
             ip: 0,
             stack: Vec::<Value>::new(),
         }
     }
 
     pub fn interpret(&mut self, source: &str) -> Res {
-        let mut compiler = Compiler::new(source);
-        let chunk = Chunk::new();
-        compiler.compile(chunk);
+        let mut compiler: Compiler = Compiler::new(source);
+        compiler.compile(self.instruction_chunk());
         // let cls = compiler.compile().ok_or(Failure::CompileError)?;
+
+        #[cfg(feature = "log_level_debug")]
+        {
+            print!("          ");
+            for value in self.stack.iter() {
+                print!("[ {:04} ]", value);
+            }
+            println!("");
+            self.instruction_chunk()
+                .disassemble(&Some(intern("vm_code")));
+            // disassemble_chunk(&self.instruction_chunk(), &Some(intern("to be changed")));
+            // disassemble_instruction(&self.instruction_chunk(), &current_instruction, 0);
+        }
 
         // self.define_natives();
         // let cls = cls.to_obj();
@@ -45,25 +51,20 @@ impl VM {
         self.run()
     }
 
+    fn instruction_chunk(&mut self) -> &mut Chunk {
+        self.chunk.as_mut().unwrap()
+    }
+
     fn run(&mut self) -> Res {
-        if self.chunk.code.is_empty() {
+        println!();
+        if self.instruction_chunk().code.is_empty() {
             return Ok(());
         }
 
         loop {
-            let current_instruction = self.chunk.code[self.ip];
-            self.ip = self.ip + 1;
-            #[cfg(feature = "log_level_debug")]
-            {
-                print!("          ");
-                for value in self.stack.iter() {
-                    print!("[ {:04} ]", value);
-                }
-                println!("");
-                let name: StrId = intern("to be changed");
-                disassemble_chunk(&self.chunk, &Some(name));
-                // disassemble_instruction(&self.chunk, &current_instruction, 0);
-            }
+            let ip: usize = self.ip;
+            let current_instruction = self.instruction_chunk().code[ip];
+            self.ip += 1;
 
             match current_instruction {
                 OpCode::NULL => self.stack.push(Value::ValNull),
@@ -88,9 +89,9 @@ impl VM {
                     if let Some(result) = result {
                         self.stack.push(result)
                     } else {
-                        // let line = &self.chunk.code[(frame.ip) as usize].line;
-                        let line = &self.chunk.lines.pop().unwrap();
-                        self.print_error(line, "Binary operation had invalid operands!");
+                        // let line = &self.instruction_chunk().code[(frame.ip) as usize].line;
+                        // let line = &self.instruction_chunk().lines.pop().unwrap();
+                        self.print_error("Binary operation had invalid operands!");
                         break;
                     }
                 }
@@ -100,17 +101,18 @@ impl VM {
                         self.stack.push(result)
                     } else {
                         // let line = current_func.chunk.code[(frame.ip) as usize].line;
-                        let line = &self.chunk.lines.pop().unwrap();
-                        self.print_error(line, "Unary operation had an invalid operand!");
+                        // let line = &self.instruction_chunk().lines.pop().unwrap();
+                        self.print_error("Unary operation had an invalid operand!");
                         break;
                     }
                 }
-                OpCode::PRINT => {
-                    println!("{}", self.pop());
-                    break;
-                }
+                OpCode::PRINT => println!("{}", self.pop()),
                 OpCode::RETURN => {
-                    println!("{}", self.pop());
+                    if self.stack.len() > 0 {
+                        println!("[vm][OpCode::RETURN] {}", self.pop());
+                    } else {
+                        println!("[vm][OpCode::RETURN] end prog");
+                    }
                     return Ok(());
                 }
             }
@@ -120,7 +122,9 @@ impl VM {
         Err(Failure::RuntimeError)
     }
 
-    fn print_error(&mut self, line: &isize, message: &str) {
+    fn print_error(&mut self, message: &str) {
+        let mut lines = self.chunk.as_ref().unwrap().lines.clone();
+        let line = lines.pop().unwrap();
         println!("[Line {}] Runtime error: {}", line, message);
     }
 
@@ -131,7 +135,10 @@ impl VM {
     fn pop(&mut self) -> Value {
         match self.stack.pop() {
             Some(value) => return value,
-            _ => panic!("VM tried to get value from empty stack"),
+            _ => {
+                println!("VM tried to get value from empty stack");
+                Value::ConstString(intern("unknown"))
+            }
         }
     }
 

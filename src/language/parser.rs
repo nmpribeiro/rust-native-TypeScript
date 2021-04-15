@@ -14,7 +14,7 @@ pub struct Parser {
 impl Parser {
     pub fn new(code: &str) -> Parser {
         Parser {
-            scanner: Scanner::new(code),
+            scanner: Scanner::new(code.to_string()),
 
             previous: Token::generic_token(TokenType::Error),
             current: Token::generic_token(TokenType::Error),
@@ -44,24 +44,6 @@ impl Parser {
                 break;
             }
         }
-        // self.previous = self.current.clone();
-        // loop {
-        //     self.current = self.scanner.scan_token();
-        //     if TokenType::Error != self.current.t_type {
-        //         break;
-        //     } else {
-        //         self.error(self.current.lexeme.clone());
-        //     }
-        // }
-        // self.previous = self.scanner.scan_token();
-        // loop {
-        //     self.current = self.scanner.scan_token();
-        //     if let TokenType::Error = self.current.t_type {
-        //         self.error(self.current.lexeme.clone());
-        //     } else {
-        //         break;
-        //     }
-        // }
     }
 
     pub fn match_next(&mut self, t_type: TokenType) -> bool {
@@ -73,7 +55,7 @@ impl Parser {
     }
 
     pub fn consume(&mut self, t_type: TokenType, message: &str) {
-        if t_type == self.get_current().t_type {
+        if t_type == self.current.t_type {
             self.advance();
         } else {
             self.error(message.to_string());
@@ -81,7 +63,7 @@ impl Parser {
     }
 
     pub fn check(&mut self, t_type: TokenType) -> bool {
-        t_type == self.get_current().t_type
+        t_type == self.current.t_type
     }
 
     pub fn error(&mut self, message: String) {
@@ -90,11 +72,11 @@ impl Parser {
         }
         self.panic_mode = true;
 
-        eprint!("[Line {}] Error", self.get_current().line);
-        match self.get_current().t_type {
+        eprint!("[Line {}] Error", self.current.line);
+        match self.current.t_type {
             TokenType::EOF => eprint!(" at end"),
             TokenType::Error => (),
-            _ => eprint!(" at line {}", self.get_current().line),
+            _ => eprint!(" at line {}", self.current.line),
         }
         eprintln!(": {}", message);
 
@@ -107,12 +89,12 @@ impl Parser {
         }
         self.panic_mode = false;
 
-        while self.get_current().t_type != TokenType::EOF {
-            if self.get_previous().t_type == TokenType::Semicolon {
+        while self.current.t_type != TokenType::EOF {
+            if self.previous.t_type == TokenType::Semicolon {
                 return;
             }
 
-            match self.get_current().t_type {
+            match self.current.t_type {
                 TokenType::Class
                 | TokenType::Function
                 | TokenType::Var

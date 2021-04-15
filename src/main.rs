@@ -2,6 +2,7 @@
 #![feature(const_fn_fn_ptr_basics)]
 mod language;
 
+use crate::language::chunk::Chunk;
 #[cfg(feature = "log_level_debug")]
 use crate::language::debug::Debug;
 use crate::language::vm::VM;

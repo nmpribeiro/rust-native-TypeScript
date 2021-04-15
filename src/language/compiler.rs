@@ -4,14 +4,11 @@ use super::chunk::Chunk;
 #[cfg(feature = "log_level_debug")]
 use crate::language::debug::Debug;
 // use super::common::MutRc;
+use super::common::{intern, OpCode};
 use super::parser::Parser;
 #[cfg(feature = "log_level_debug")]
 use super::scanner::Scanner;
-use super::token::TokenType;
-use {
-    super::common::{ConstantIndex, OpCode},
-    super::value::NumberValueType,
-};
+use super::token::{Token, TokenType};
 
 plain_enum_mod! {this,Precedence {
     None,
@@ -131,9 +128,9 @@ static RULES: [ParseRule; 45] = [
     ParseRule::new(Precedence::None),                                              // EOF
 ];
 
-pub struct Compiler {
+pub struct Compiler<'a> {
     parser: Parser,
-    compiling_chunk: Chunk,
+    pub compiling_chunk: Option<&'a mut Chunk>,
     // function: Function,
     // function_type: FunctionType,
 
@@ -145,22 +142,30 @@ pub struct Compiler {
     // class_stack: MutRc<Vec<ClassCompile>>,
 }
 
-impl Compiler {
-    pub fn new(code: &str) -> Compiler {
+impl<'a> Compiler<'a> {
+    pub fn new(code: &str) -> Compiler<'a> {
         Compiler {
             parser: Parser::new(code),
-            compiling_chunk: Chunk::new(),
+            compiling_chunk: None, // temporary
         }
     }
 
     // pub fn compile(&mut self, source: String, chunk: &Chunk) {
-    pub fn compile(&mut self, chunk: Chunk) {
+    pub fn compile(&mut self, chunk: &'a mut Chunk) {
+        // #[cfg(feature = "log_level_debug")]
+        // Compiler::debug_scanner(self.parser.scanner.source.clone());
         self.parser.advance();
-        self.compiling_chunk = chunk;
+        let line = self.get_line();
+        println!("[scanner][line {}] line start", line);
+        self.compiling_chunk = Some(chunk);
 
         while !self.parser.match_next(TokenType::EOF) {
+            let line = self.get_line();
+            println!("[compiler][line {}] compile::(while !EOF)", line);
             self.declaration();
         }
+        let line = self.get_line();
+        println!("[compiler][line {}] compile::out of (while !EOF)", line);
         let function = self.end_compiliation();
         // if self.parser_mut().had_error {
         //     None
@@ -173,7 +178,6 @@ impl Compiler {
     }
 
     fn expression(&mut self) {
-        println!("expression");
         self.parse_precedence(Precedence::Assignment);
     }
 
@@ -186,14 +190,6 @@ impl Compiler {
         }
 
         self.parser.synchronize();
-    }
-
-    fn end_compiliation(&mut self) {
-        self.emit_return();
-        // Rc::new(RefCell::new(mem::replace(
-        //     &mut self.function,
-        //     Self::new_function(None, 0),
-        // )))
     }
 
     fn statement(&mut self) {
@@ -213,7 +209,6 @@ impl Compiler {
     }
 
     fn print_statement(&mut self) {
-        println!("print_statement");
         self.expression();
         self.consume(TokenType::Semicolon, "Expected ';' after value.");
         self.emit_byte(OpCode::PRINT);
@@ -225,43 +220,23 @@ impl Compiler {
         self.emit_byte(OpCode::POP);
     }
 
-    fn error(&mut self, message: &str) {
-        self.parser.error(message.to_string());
+    fn grouping(&mut self) {
+        self.expression();
+        self.consume(TokenType::RightParen, "Expect ')' after expression.");
     }
-
-    pub fn consume(&mut self, t_type: TokenType, message: &str) {
-        if self.parser.get_current().t_type == t_type {
-            self.parser.advance();
-            return;
-        }
-        self.parser.error(message.to_string());
-    }
-
-    // Emition
-    pub fn emit_byte(&mut self, op_code: OpCode) {
-        self.compiling_chunk
-            .add_op_code(op_code, self.parser.scanner.line);
-    }
-
-    pub fn emit_bytes(&mut self, op_code1: OpCode, op_code2: OpCode) {
-        self.emit_byte(op_code1);
-        self.emit_byte(op_code2);
-    }
-
-    fn emit_return(&mut self) {
-        self.emit_byte(OpCode::RETURN);
-    }
-
-    fn end_compiler(&mut self) {
-        self.emit_return();
-        #[cfg(feature = "log_level_debug")]
-        if !self.parser.had_error {
-            self.compiling_chunk.disassemble("code");
+    fn unary(&mut self) {
+        let operator_type: TokenType = self.parser.get_previous().t_type;
+        // Compile the operand.
+        self.parse_precedence(Precedence::Unary);
+        // Emit the operator instruction.
+        match operator_type {
+            TokenType::Minus => self.emit_byte(OpCode::NEGATE),
+            TokenType::Bang => self.emit_byte(OpCode::NOT),
+            _ => return, // Unreachable
         }
     }
 
     fn binary(&mut self) {
-        println!("binary");
         // Remember the operator.
         let operator_type: TokenType = self.parser.get_previous().t_type;
         // Compile the right operand.
@@ -285,48 +260,26 @@ impl Compiler {
         }
     }
 
-    fn grouping(&mut self) {
-        self.expression();
-        self.consume(TokenType::RightParen, "Expect ')' after expression.");
-    }
-
-    fn number(&mut self) {
-        let value: f64 = self
-            .parser
-            .get_previous()
-            .lexeme
-            .parse::<f64>()
-            .expect("Not a number!");
-        self.compiling_chunk.add_constant(value);
-    }
-
-    fn unary(&mut self) {
-        println!("unary");
-        let operator_type: TokenType = self.parser.get_previous().t_type;
-        // Compile the operand.
-        self.parse_precedence(Precedence::Unary);
-        // Emit the operator instruction.
-        match operator_type {
-            TokenType::Minus => self.emit_byte(OpCode::NEGATE),
-            TokenType::Bang => self.emit_byte(OpCode::NOT),
-            _ => return, // Unreachable
-        }
-    }
-
+    fn call(&mut self) {}
+    fn dot(&mut self, _can_assign: bool) {}
+    fn and(&mut self) {}
+    fn or(&mut self) {}
     fn parse_precedence(&mut self, precedence: Precedence) {
-        println!("parse_precedence");
         self.parser.advance();
-        let prefix_rule = Compiler::get_rule(self.parser.get_previous().t_type).prefix;
+
+        let rule = Compiler::get_rule(self.previous().t_type);
+        let prefix_rule = rule.prefix;
         let can_assign = precedence <= Precedence::Assignment;
-        if let Some(prefix_rule) = prefix_rule {
-            prefix_rule(self, can_assign); // is prefixRule();
+
+        if let Some(rule) = prefix_rule {
+            rule(self, can_assign);
         } else {
             self.error("Expected expression.");
             return;
         }
 
         while precedence.to_usize()
-            <= Compiler::get_rule(self.parser.get_current().t_type)
+            <= Compiler::get_rule(self.current().t_type)
                 .precedence
                 .to_usize()
         {
@@ -345,32 +298,98 @@ impl Compiler {
         // }
     }
 
-    fn get_rule(t_type: TokenType) -> &'static ParseRule {
-        println!("get_rule t_type::{} {}", t_type, t_type.to_usize());
-        &RULES[t_type.to_usize() - 1]
-    }
-
-    fn dot(&mut self, _can_assign: bool) {}
-    fn variable(&mut self, _can_assign: bool) {}
-    fn string(&mut self) {}
     fn literal(&mut self) {
         match self.parser.get_previous().t_type {
             TokenType::False => self.emit_byte(OpCode::FALSE),
             TokenType::Null => self.emit_byte(OpCode::NULL),
             TokenType::True => self.emit_byte(OpCode::TRUE),
+            TokenType::Number => {
+                // let value: f64 = (self.parser.get_previous().lexeme)
+                //     .parse()
+                //     .expect("Invalid number?");
+
+                let value: f64 = self
+                    .parser
+                    .get_previous()
+                    .lexeme
+                    .parse::<f64>()
+                    .expect("Not a number!");
+                // self.compiling_chunk().add_constant(value);
+
+                self.emit_byte(OpCode::NUMBER(value));
+            }
             _ => return,
         }
     }
 
-    fn and(&mut self) {}
-    fn or(&mut self) {}
-    fn super_(&mut self) {}
+    fn string(&mut self) {
+        let token = self.previous();
+        self.emit_byte(OpCode::STRING(intern(token.lexeme)))
+    }
+
     fn this(&mut self) {}
-    fn call(&mut self) {}
+    fn super_(&mut self) {}
+    fn variable(&mut self, _can_assign: bool) {}
+
+    fn error(&mut self, message: &str) {
+        self.parser.error(message.to_string());
+    }
+
+    pub fn consume(&mut self, t_type: TokenType, message: &str) {
+        if self.current().t_type == t_type {
+            self.parser.advance();
+            return;
+        }
+        self.parser.error(message.to_string());
+    }
+
+    pub fn get_line(&mut self) -> isize {
+        self.parser.scanner.line
+    }
+
+    // Emition
+    pub fn emit_byte(&mut self, op_code: OpCode) {
+        let line = self.previous().line;
+        self.current_chunk_mut().add_op_code(op_code, line);
+    }
+
+    pub fn emit_bytes(&mut self, op_code1: OpCode, op_code2: OpCode) {
+        self.emit_byte(op_code1);
+        self.emit_byte(op_code2);
+    }
+
+    fn emit_return(&mut self) {
+        self.emit_byte(OpCode::RETURN);
+    }
+
+    fn end_compiliation(&mut self) {
+        self.emit_return();
+        // Rc::new(RefCell::new(mem::replace(
+        //     &mut self.function,
+        //     Self::new_function(None, 0),
+        // )))
+    }
+
+    fn get_rule(t_type: TokenType) -> &'static ParseRule {
+        &RULES[t_type.to_usize()]
+    }
+
+    fn current(&self) -> Token {
+        self.parser.current.clone()
+    }
+
+    fn previous(&self) -> Token {
+        self.parser.previous.clone()
+    }
+
+    fn current_chunk_mut(&mut self) -> &mut Chunk {
+        // &mut self.function.chunk
+        self.compiling_chunk.as_mut().unwrap()
+    }
 
     // In order to debug the scanner, just hook this up from outside :)
     #[cfg(feature = "log_level_debug")]
-    pub fn debugScanner(&mut self, source: &str) {
+    pub fn debug_scanner(source: String) {
         let mut scanner = Scanner::new(source);
         let mut line: isize = -1; //it could be any value > 0, really
         loop {
@@ -389,7 +408,10 @@ impl Compiler {
             println!("{} {}", token.t_type, lexeme);
 
             match token.t_type {
-                TokenType::EOF => break,
+                TokenType::EOF => {
+                    println!();
+                    break;
+                }
                 _ => {}
             }
         }

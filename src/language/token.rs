@@ -13,8 +13,8 @@ plain_enum_mod! {this,TokenType {
     Plus,
     Semicolon,
     Slash,
+    // 10
     Star,
-
     // One or two character tokens.
     Bang,
     BangEqual,
@@ -24,12 +24,12 @@ plain_enum_mod! {this,TokenType {
     GreaterEqual,
     Less,
     LessEqual,
-
     // Literals.
     Identifier,
+    // 20
     String,
     Number,
-
+    //Operations
     And,
     Or,
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_Operators
@@ -40,6 +40,7 @@ plain_enum_mod! {this,TokenType {
     // Keywords.
     Class,
     Else,
+    // 30
     Extends,
     False,
     For,
@@ -50,6 +51,7 @@ plain_enum_mod! {this,TokenType {
     Return,
     Super,
     This,
+    // 40
     True,
     Var,
     While,
@@ -65,8 +67,7 @@ pub struct Token {
     pub length: usize,
     pub line: isize,
     pub lexeme: String,
-    // pub source: String,
-    pub error: Option<String>, // &'static str,
+    pub error: Option<String>,
 }
 
 impl Token {
@@ -77,68 +78,59 @@ impl Token {
             length: 0,
             line: 0,
             lexeme: String::from(""),
-            // source: String::from(""),
             error: None,
         }
     }
-
-    // pub fn generic_ident(text: &str) -> Token {
-    //     Token {
-    //         t_type: Type::Identifier,
-    //         lexeme: interner::intern(text),
-    //         line: 0,
-    //     }
-    // }
 }
 
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            TokenType::LeftParen => write!(f, "TOKEN_TYPE_LEFT_PAREN"),
-            TokenType::RightParen => write!(f, "TOKEN_TYPE_RIGHT_PAREN"),
-            TokenType::LeftBrace => write!(f, "TOKEN_TYPE_LEFT_BRACE"),
-            TokenType::RightBrace => write!(f, "TOKEN_TYPE_RIGHT_BRACE"),
-            TokenType::Comma => write!(f, "TOKEN_TYPE_COMMA"),
-            TokenType::Dot => write!(f, "TOKEN_TYPE_DOT"),
-            TokenType::Minus => write!(f, "TOKEN_TYPE_MINUS"),
-            TokenType::Plus => write!(f, "TOKEN_TYPE_PLUS"),
-            TokenType::Semicolon => write!(f, "TOKEN_TYPE_SEMI_COLON"),
-            TokenType::Slash => write!(f, "TOKEN_TYPE_SLASH"),
-            TokenType::Star => write!(f, "TOKEN_TYPE_STAR"),
-            TokenType::Bang => write!(f, "TOKEN_TYPE_BANG"),
-            TokenType::BangEqual => write!(f, "TOKEN_TYPE_BANG_EQUAL"),
-            TokenType::Equal => write!(f, "TOKEN_TYPE_EQUAL"),
-            TokenType::EqualEqual => write!(f, "TOKEN_TYPE_EQUAL_EQUAL"),
-            TokenType::Greater => write!(f, "TOKEN_TYPE_GREATER"),
-            TokenType::GreaterEqual => write!(f, "TOKEN_TYPE_GREATER_EQUAL"),
-            TokenType::Less => write!(f, "TOKEN_TYPE_LESS"),
-            TokenType::LessEqual => write!(f, "TOKEN_TYPE_LESS_EQUAL"),
-            TokenType::Identifier => write!(f, "TOKEN_TYPE_IDENTIFIER"),
-            TokenType::String => write!(f, "TOKEN_TYPE_STRING"),
-            TokenType::Number => write!(f, "TOKEN_TYPE_NUMBER"),
-            TokenType::And => write!(f, "TOKEN_TYPE_AND"),
-            TokenType::Class => write!(f, "TOKEN_TYPE_CLASS"),
-            TokenType::Else => write!(f, "TOKEN_TYPE_ELSE"),
-            TokenType::Extends => write!(f, "TOKEN_TYPE_EXTENDS"),
-            TokenType::False => write!(f, "TOKEN_TYPE_FALSE"),
-            TokenType::For => write!(f, "TOKEN_TYPE_FOR"),
-            TokenType::Function => write!(f, "TOKEN_TYPE_FUN"),
-            TokenType::If => write!(f, "TOKEN_TYPE_IF"),
-            TokenType::Null => write!(f, "TOKEN_TYPE_NULL"),
-            TokenType::Or => write!(f, "TOKEN_TYPE_OR"),
-            TokenType::Print => write!(f, "TOKEN_TYPE_PRINT"),
-            TokenType::Return => write!(f, "TOKEN_TYPE_RETURN"),
-            TokenType::Super => write!(f, "TOKEN_TYPE_SUPER"),
-            TokenType::This => write!(f, "TOKEN_TYPE_THIS"),
-            TokenType::True => write!(f, "TOKEN_TYPE_TRUE"),
-            TokenType::Var => write!(f, "TOKEN_TYPE_VAR"),
-            TokenType::While => write!(f, "TOKEN_TYPE_WHILE"),
-            TokenType::Error => write!(f, "TOKEN_TYPE_ERROR"),
-            TokenType::EOF => write!(f, "TOKEN_TYPE_EOF"),
-            TokenType::BitwiseAnd => write!(f, "TOKEN_TYPE_BITWISE_AND"), // a & b
-            TokenType::BitwiseOr => write!(f, "TOKEN_TYPE_BITWISE_OR"),   // a | b
-            TokenType::BitwiseXor => write!(f, "TOKEN_TYPE_BITWISE_XOR"), // a ^ b
-            TokenType::BitwiseNot => write!(f, "TOKEN_TYPE_BITWISE_NOT"), // ~ a
+            TokenType::LeftParen => write!(f, "TokenType::LEFT_PAREN"),
+            TokenType::RightParen => write!(f, "TokenType::RIGHT_PAREN"),
+            TokenType::LeftBrace => write!(f, "TokenType::LEFT_BRACE"),
+            TokenType::RightBrace => write!(f, "TokenType::RIGHT_BRACE"),
+            TokenType::Comma => write!(f, "TokenType::COMMA"),
+            TokenType::Dot => write!(f, "TokenType::DOT"),
+            TokenType::Minus => write!(f, "TokenType::MINUS"),
+            TokenType::Plus => write!(f, "TokenType::PLUS"),
+            TokenType::Semicolon => write!(f, "TokenType::SEMICOLON"),
+            TokenType::Slash => write!(f, "TokenType::SLASH"),
+            TokenType::Star => write!(f, "TokenType::STAR"),
+            TokenType::Bang => write!(f, "TokenType::BANG"),
+            TokenType::BangEqual => write!(f, "TokenType::BANG_EQUAL"),
+            TokenType::Equal => write!(f, "TokenType::EQUAL"),
+            TokenType::EqualEqual => write!(f, "TokenType::EQUAL_EQUAL"),
+            TokenType::Greater => write!(f, "TokenType::GREATER"),
+            TokenType::GreaterEqual => write!(f, "TokenType::GREATER_EQUAL"),
+            TokenType::Less => write!(f, "TokenType::LESS"),
+            TokenType::LessEqual => write!(f, "TokenType::LESS_EQUAL"),
+            TokenType::Identifier => write!(f, "TokenType::IDENTIFIER"),
+            TokenType::String => write!(f, "TokenType::STRING"),
+            TokenType::Number => write!(f, "TokenType::NUMBER"),
+            TokenType::And => write!(f, "TokenType::AND"),
+            TokenType::Class => write!(f, "TokenType::CLASS"),
+            TokenType::Else => write!(f, "TokenType::ELSE"),
+            TokenType::Extends => write!(f, "TokenType::EXTENDS"),
+            TokenType::False => write!(f, "TokenType::FALSE"),
+            TokenType::For => write!(f, "TokenType::FOR"),
+            TokenType::Function => write!(f, "TokenType::FUN"),
+            TokenType::If => write!(f, "TokenType::IF"),
+            TokenType::Null => write!(f, "TokenType::NULL"),
+            TokenType::Or => write!(f, "TokenType::OR"),
+            TokenType::Print => write!(f, "TokenType::PRINT"),
+            TokenType::Return => write!(f, "TokenType::RETURN"),
+            TokenType::Super => write!(f, "TokenType::SUPER"),
+            TokenType::This => write!(f, "TokenType::THIS"),
+            TokenType::True => write!(f, "TokenType::TRUE"),
+            TokenType::Var => write!(f, "TokenType::VAR"),
+            TokenType::While => write!(f, "TokenType::WHILE"),
+            TokenType::Error => write!(f, "TokenType::ERROR"),
+            TokenType::EOF => write!(f, "TokenType::EOF"),
+            TokenType::BitwiseAnd => write!(f, "TokenType::BITWISE_AND"), // a & b
+            TokenType::BitwiseOr => write!(f, "TokenType::BITWISE_OR"),   // a | b
+            TokenType::BitwiseXor => write!(f, "TokenType::BITWISE_XOR"), // a ^ b
+            TokenType::BitwiseNot => write!(f, "TokenType::BITWISE_NOT"), // ~ a
         }
     }
 }

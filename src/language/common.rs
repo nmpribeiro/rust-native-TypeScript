@@ -4,8 +4,6 @@ use std::fmt;
 use std::{cell::RefCell, hash::BuildHasherDefault, rc::Rc};
 use string_interner::{backend::BucketBackend, symbol::SymbolU32, StringInterner};
 
-pub type ConstantIndex = usize;
-
 pub type MutRc<T> = Rc<RefCell<T>>;
 pub type StrId = SymbolU32;
 

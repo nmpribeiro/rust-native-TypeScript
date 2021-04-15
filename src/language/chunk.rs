@@ -1,14 +1,9 @@
-use {
-    super::common::{ConstantIndex, OpCode},
-    super::value::NumberValueType,
-};
+use super::common::OpCode;
 
 pub struct Chunk {
     pub count: usize,
-    // pub capacity: usize,
     pub code: Vec<OpCode>,
     pub lines: Vec<isize>,
-    pub constants: Vec<NumberValueType>,
 }
 
 impl Chunk {
@@ -16,7 +11,6 @@ impl Chunk {
         Chunk {
             count: 0,
             code: Vec::<OpCode>::new(),
-            constants: Vec::<NumberValueType>::new(),
             lines: Vec::<isize>::new(),
         }
     }
@@ -24,11 +18,6 @@ impl Chunk {
     pub fn add_op_code(&mut self, op_code: OpCode, line: isize) {
         self.code.push(op_code);
         self.lines.push(line);
-        self.count = self.count + 1;
-    }
-
-    pub fn add_constant(&mut self, value: NumberValueType) -> ConstantIndex {
-        self.constants.push(value);
-        return self.constants.len() - 1;
+        self.count += 1;
     }
 }
